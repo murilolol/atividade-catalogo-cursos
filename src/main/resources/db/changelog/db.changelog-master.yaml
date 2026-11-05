@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - include:
+      file: changes/001-criar-tabela-instrutor.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/002-criar-tabela-curso.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-adicionar-fk-curso-instrutor.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-adicionar-unique-email-instrutor.yaml
+      relativeToChangelogFile: true

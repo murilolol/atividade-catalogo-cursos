@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-adicionar-unique-email-instrutor
+      author: murilolol
+      changes:
+        - addUniqueConstraint:
+            constraintName: uk_instrutor_email
+            tableName: instrutor
+            columnNames: email
+      rollback:
+        - dropUniqueConstraint:
+            constraintName: uk_instrutor_email
+            tableName: instrutor

@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-adicionar-fk-curso-instrutor
+      author: murilolol
+      changes:
+        - addForeignKeyConstraint:
+            constraintName: fk_curso_instrutor
+            baseTableName: curso
+            baseColumnNames: instrutor_id
+            referencedTableName: instrutor
+            referencedColumnNames: id
+            onDelete: RESTRICT
+        - createIndex:
+            indexName: idx_curso_instrutor_id
+            tableName: curso
+            columns:
+              - column:
+                  name: instrutor_id
+      rollback:
+        - dropIndex:
+            indexName: idx_curso_instrutor_id
+            tableName: curso
+        - dropForeignKeyConstraint:
+            baseTableName: curso
+            constraintName: fk_curso_instrutor
