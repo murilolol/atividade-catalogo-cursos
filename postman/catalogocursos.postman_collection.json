@@ -1,0 +1,782 @@
+{
+  "info": {
+    "name": "Catálogo Independente de Cursos",
+    "description": "Fluxo completo da API do catálogo de cursos: cadastro de instrutores e cursos, consulta, listagem ordenada por instrutor e cenários de erro 400, 404 e 409. Reexecutável: cada execução gera um email novo. Rode a coleção inteira na ordem (Collection Runner ou Newman).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Instrutores",
+      "item": [
+        {
+          "name": "Cadastrar instrutor (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Marina Costa\",\n  \"email\": \"{{emailInstrutor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"emailInstrutor\", `marina.${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Header Location aponta para o recurso criado\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/api/instrutores/\" + pm.response.json().id + \"$\"));",
+                  "});",
+                  "const instrutor = pm.response.json();",
+                  "pm.test(\"Resposta sem a coleção de cursos\", () => {",
+                  "    pm.expect(instrutor).to.have.all.keys(\"id\", \"nome\", \"email\");",
+                  "    pm.expect(instrutor.nome).to.eql(\"Marina Costa\");",
+                  "});",
+                  "pm.collectionVariables.set(\"instrutorId\", instrutor.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar segundo instrutor (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Paulo Lima\",\n  \"email\": \"paulo.{{$timestamp}}{{$randomInt}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"outroInstrutorId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar instrutor (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores/{{instrutorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores",
+                "{{instrutorId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Instrutor correto\", () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get(\"instrutorId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Email duplicado (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Marina Costa\",\n  \"email\": \"{{emailInstrutor}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409 Conflict\", () => pm.response.to.have.status(409));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(409);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});",
+                  "pm.test(\"Path do erro\", () => pm.expect(erro.path).to.eql(\"/api/instrutores\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Instrutor inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"A\",\n  \"email\": \"email-invalido\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(400);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});",
+                  "pm.test(\"Path do erro\", () => pm.expect(erro.path).to.eql(\"/api/instrutores\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Instrutor inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores",
+                "999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(404);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Cursos",
+      "item": [
+        {
+          "name": "Cadastrar curso \"Java orientado a objetos\" (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Java orientado a objetos\",\n  \"cargaHoraria\": 60,\n  \"nivel\": \"INICIANTE\",\n  \"instrutorId\": {{instrutorId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Header Location aponta para o recurso criado\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/api/cursos/\" + pm.response.json().id + \"$\"));",
+                  "});",
+                  "const curso = pm.response.json();",
+                  "pm.test(\"Curso traz só o resumo do instrutor\", () => {",
+                  "    pm.expect(curso.instrutor).to.have.all.keys(\"id\", \"nome\");",
+                  "    pm.expect(curso.instrutor.id).to.eql(Number(pm.collectionVariables.get(\"instrutorId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar curso \"APIs REST com Spring Boot\" (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"APIs REST com Spring Boot\",\n  \"cargaHoraria\": 40,\n  \"nivel\": \"INTERMEDIARIO\",\n  \"instrutorId\": {{instrutorId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Header Location aponta para o recurso criado\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/api/cursos/\" + pm.response.json().id + \"$\"));",
+                  "});",
+                  "const curso = pm.response.json();",
+                  "pm.test(\"Curso traz só o resumo do instrutor\", () => {",
+                  "    pm.expect(curso.instrutor).to.have.all.keys(\"id\", \"nome\");",
+                  "    pm.expect(curso.instrutor.id).to.eql(Number(pm.collectionVariables.get(\"instrutorId\")));",
+                  "});",
+                  "pm.collectionVariables.set(\"cursoId\", curso.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar curso \"Banco de dados\" (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Banco de dados\",\n  \"cargaHoraria\": 30,\n  \"nivel\": \"AVANCADO\",\n  \"instrutorId\": {{outroInstrutorId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Header Location aponta para o recurso criado\", () => {",
+                  "    pm.expect(pm.response.headers.get(\"Location\")).to.match(new RegExp(\"/api/cursos/\" + pm.response.json().id + \"$\"));",
+                  "});",
+                  "const curso = pm.response.json();",
+                  "pm.test(\"Curso traz só o resumo do instrutor\", () => {",
+                  "    pm.expect(curso.instrutor).to.have.all.keys(\"id\", \"nome\");",
+                  "    pm.expect(curso.instrutor.id).to.eql(Number(pm.collectionVariables.get(\"outroInstrutorId\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar curso (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos/{{cursoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos",
+                "{{cursoId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "const curso = pm.response.json();",
+                  "pm.test(\"Dados do curso e resumo do instrutor\", () => {",
+                  "    pm.expect(curso.titulo).to.eql(\"APIs REST com Spring Boot\");",
+                  "    pm.expect(curso.nivel).to.eql(\"INTERMEDIARIO\");",
+                  "    pm.expect(curso.instrutor).to.eql({ id: Number(pm.collectionVariables.get(\"instrutorId\")), nome: \"Marina Costa\" });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Curso inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"AB\",\n  \"cargaHoraria\": 401,\n  \"nivel\": \"INICIANTE\",\n  \"instrutorId\": {{instrutorId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(400);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});",
+                  "pm.test(\"Path do erro\", () => pm.expect(erro.path).to.eql(\"/api/cursos\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nível inexistente (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Curso com nivel errado\",\n  \"cargaHoraria\": 10,\n  \"nivel\": \"EXPERT\",\n  \"instrutorId\": {{instrutorId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(400);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Curso com instrutor inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titulo\": \"Curso sem instrutor\",\n  \"cargaHoraria\": 10,\n  \"nivel\": \"INICIANTE\",\n  \"instrutorId\": 999999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(404);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});",
+                  "pm.test(\"Path do erro\", () => pm.expect(erro.path).to.eql(\"/api/cursos\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Curso inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cursos/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cursos",
+                "999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(404);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});",
+                  "pm.test(\"Path do erro\", () => pm.expect(erro.path).to.eql(\"/api/cursos/999999\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Listagem por instrutor",
+      "item": [
+        {
+          "name": "Cursos do instrutor ordenados por título (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores/{{instrutorId}}/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores",
+                "{{instrutorId}}",
+                "cursos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "const cursos = pm.response.json();",
+                  "pm.test(\"Somente os cursos do instrutor, em ordem alfabética\", () => {",
+                  "    pm.expect(cursos.map(c => c.titulo)).to.eql([\"APIs REST com Spring Boot\", \"Java orientado a objetos\"]);",
+                  "});",
+                  "pm.test(\"Itens sem dados do instrutor (sem recursão)\", () => {",
+                  "    cursos.forEach(c => pm.expect(c).to.have.all.keys(\"id\", \"titulo\", \"cargaHoraria\", \"nivel\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cursos do outro instrutor (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores/{{outroInstrutorId}}/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores",
+                "{{outroInstrutorId}}",
+                "cursos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Só o curso do outro instrutor\", () => pm.expect(pm.response.json().map(c => c.titulo)).to.eql([\"Banco de dados\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Instrutor inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/instrutores/999999/cursos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "instrutores",
+                "999999",
+                "cursos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "const erro = pm.response.json();",
+                  "pm.test(\"Erro no formato { status, message, path }\", () => {",
+                  "    pm.expect(erro.status).to.eql(404);",
+                  "    pm.expect(erro.message).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(erro.path).to.be.a(\"string\");",
+                  "});",
+                  "pm.test(\"Path do erro\", () => pm.expect(erro.path).to.eql(\"/api/instrutores/999999/cursos\"));",
+                  "pm.test(\"Mensagem de instrutor não encontrado\", () => pm.expect(pm.response.json().message).to.eql(\"Instrutor não encontrado\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "instrutorId",
+      "value": ""
+    },
+    {
+      "key": "outroInstrutorId",
+      "value": ""
+    },
+    {
+      "key": "cursoId",
+      "value": ""
+    },
+    {
+      "key": "emailInstrutor",
+      "value": ""
+    }
+  ]
+}
